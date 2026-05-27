@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subconscious Observation System</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <main id="landing" class="page active">
+        <div class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Subconscious Observation System</p>
+            <h1>Enter the quiet architecture of your inner night.</h1>
+            <p>Capture dream textures, map emotion echoes, and archive memory fragments with a modern, intuitive portal to your subconscious.</p>
+            <div class="hero-actions">
+              <button class="primary-btn" data-action="go" data-target="login">Log In</button>
+              <button class="secondary-btn" data-action="go" data-target="signup">Sign Up</button>
+            </div>
+          </div>
+          <div class="hero-panel">
+            <div class="panel-card">
+              <span class="panel-title">System Pulse</span>
+              <p>Minimal interface. Quiet colors. Instant connection to your inner landscape.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <section id="login" class="page">
+        <div class="form-shell">
+          <div class="form-header">
+            <h2>Log In</h2>
+            <p>Access your dream room and subconscious archive.</p>
+          </div>
+          <form id="loginForm" class="form-grid">
+            <label>Email<input type="email" name="email" required placeholder="you@domain.com" /></label>
+            <label>Password<input type="password" name="password" required placeholder="••••••••" /></label>
+            <button type="submit" class="primary-btn">Log In</button>
+          </form>
+          <div class="form-footer">
+            <a href="#" data-action="go" data-target="signup">Create an account</a>
+            <a href="#" data-action="go" data-target="forgot-password">Forgot Password?</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="signup" class="page">
+        <div class="form-shell">
+          <div class="form-header">
+            <h2>Sign Up</h2>
+            <p>Create an account for secure dream logging.</p>
+          </div>
+          <form id="signupForm" class="form-grid">
+            <label>Username<input type="text" name="username" required placeholder="LunaWalker" /></label>
+            <label>Email<input type="email" name="email" required placeholder="you@domain.com" /></label>
+            <label>Password<input type="password" name="password" required placeholder="••••••••" /></label>
+            <label>Confirm Password<input type="password" name="confirmPassword" required placeholder="••••••••" /></label>
+            <div class="validation-line" id="signupValidation"></div>
+            <button type="submit" class="primary-btn">Create Account</button>
+          </form>
+          <div class="form-footer">
+            <a href="#" data-action="go" data-target="login">Back to Log In</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="forgot-password" class="page">
+        <div class="form-shell">
+          <div class="form-header">
+            <h2>Forgot Password</h2>
+            <p>Reset your access with a secure verification code.</p>
+          </div>
+          <form id="passwordForm" class="form-grid">
+            <div id="passwordInitial">
+              <label>Email<input type="email" name="email" required placeholder="you@domain.com" /></label>
+              <button type="button" id="sendCodeBtn" class="primary-btn">Send Verification Code</button>
+            </div>
+            <div id="passwordResetFields" class="hidden">
+              <label>6-Digit Verification Code<input type="text" name="code" pattern="\d{6}" maxlength="6" placeholder="123456" /></label>
+              <label>New Password<input type="password" name="newPassword" placeholder="••••••••" /></label>
+              <label>Confirm New Password<input type="password" name="confirmNewPassword" placeholder="••••••••" /></label>
+              <div class="validation-line" id="resetValidation"></div>
+              <button type="button" id="resetPasswordBtn" class="primary-btn">Reset Password</button>
+            </div>
+          </form>
+          <div class="form-footer">
+            <a href="#" data-action="go" data-target="login">Back to Log In</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboard" class="page">
+        <div class="dashboard-layout">
+          <aside class="sidebar">
+            <div class="brand">Dream Lobby</div>
+            <nav>
+              <button class="nav-link" data-card="dream-room">Canvas & AI Dream Room</button>
+              <button class="nav-link" data-card="data-chart">Subconscious Data Chart</button>
+              <button class="nav-link" data-card="time-capsule">Time Capsule</button>
+            </nav>
+            <button id="logoutBtn" class="secondary-btn logout-btn">Log Out</button>
+          </aside>
+          <section class="dashboard-main">
+            <header class="dashboard-header">
+              <div>
+                <p class="eyebrow">Welcome back,</p>
+                <h1 id="welcomeName">Traveler</h1>
+              </div>
+              <div class="status-card">
+                <span>Current mode</span>
+                <strong>Observer</strong>
+              </div>
+            </header>
+            <div class="cards-grid">
+              <article class="feature-card" data-card="dream-room">
+                <h3>Canvas & AI Dream Room</h3>
+                <p>Paint your dreams, store imagery, and let AI interpret the subconscious textures.</p>
+              </article>
+              <article class="feature-card" data-card="data-chart">
+                <h3>Subconscious Data Chart</h3>
+                <p>Review emotion patterns and dream trends across time.</p>
+              </article>
+              <article class="feature-card" data-card="time-capsule">
+                <h3>Time Capsule</h3>
+                <p>Seal memories, revisit hidden fragments, and preserve moments in silence.</p>
+              </article>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
