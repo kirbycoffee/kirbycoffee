@@ -1,8 +1,10 @@
-from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, session
-import random
+from flask import Flask
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app) 
+
+
 app.secret_key = 'replace-with-a-strong-secret-key'
 
 # In-memory store for demo purposes. Replace with a database in production.
