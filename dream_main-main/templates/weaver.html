@@ -1,0 +1,1496 @@
+<!--
+  完整的 Dream Weaver Room 範本（weaver.html）
+  - 包含：進入動畫遮罩、兩個主要輸入欄位（夢境與現實）、切換 Checkbox 與送出按鈕
+  - 所有 UI 文案均使用繁體中文
+  - 註解為逐行說明，方便學習動畫與互動邏輯
+-->
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <!-- 設定文件編碼與響應式 viewport -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- 頁面標題（繁體中文） -->
+    <title>夢境編織室</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styleWeaver.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  </head>
+  <body>
+    <!-- ============ 星點背景層（新增：星空感）============ -->
+    <!-- 由 JS 動態生成 55 個隨機位置與大小的星點，產生閃爍星空效果 -->
+    <div id="star-layer" aria-hidden="true"></div>
+
+    <!-- 背景環境光球：放在最底層，作為 Aurora 效果 -->
+    <div class="ambient-orb one"></div>
+    <div class="ambient-orb two"></div>
+    <div class="ambient-orb three"></div>
+    <!-- ⑤ 成功置入：六芒星水印 -->
+    <svg style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:500px;height:500px;opacity:.025;pointer-events:none;z-index:0;animation:sigilRot 60s linear infinite;" viewBox="0 0 200 200">
+      <polygon points="100,10 190,155 10,155" fill="none" stroke="rgba(155,120,255,1)" stroke-width="1"/>
+      <polygon points="100,190 10,45 190,45" fill="none" stroke="rgba(155,120,255,1)" stroke-width="1"/>
+      <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(123,220,255,.8)" stroke-width=".8"/>
+      <circle cx="100" cy="100" r="52" fill="none" stroke="rgba(155,120,255,.6)" stroke-width=".6" stroke-dasharray="4 3"/>
+    </svg>
+    <!-- 原本的星座連線 SVG -->
+    <svg style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.38;" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <line x1="80" y1="120" x2="280" y2="200" stroke="rgba(200,170,255,.9)" stroke-width="1"/>
+    <line x1="280" y1="200" x2="440" y2="150" stroke="rgba(200,170,255,.9)" stroke-width="1"/>
+    <line x1="440" y1="150" x2="560" y2="280" stroke="rgba(160,220,255,.85)" stroke-width="1"/>
+    <line x1="900" y1="100" x2="1060" y2="180" stroke="rgba(200,170,255,.85)" stroke-width="1"/>
+    <line x1="1060" y1="180" x2="1250" y2="130" stroke="rgba(200,170,255,.85)" stroke-width="1"/>
+    <line x1="1060" y1="180" x2="1150" y2="320" stroke="rgba(160,220,255,.8)" stroke-width="1"/>
+    <line x1="100" y1="650" x2="200" y2="780" stroke="rgba(200,170,255,.75)" stroke-width="1"/>
+    <line x1="1200" y1="700" x2="1350" y2="800" stroke="rgba(160,220,255,.75)" stroke-width="1"/>
+
+    <circle cx="80" cy="120" r="3" fill="rgba(220,190,255,1)"/>
+    <circle cx="280" cy="200" r="2.5" fill="rgba(220,190,255,.95)"/>
+    <circle cx="440" cy="150" r="2.8" fill="rgba(160,230,255,1)"/>
+    <circle cx="560" cy="280" r="2.2" fill="rgba(160,230,255,.9)"/>
+    <circle cx="900" cy="100" r="3" fill="rgba(255,180,230,.95)"/>
+    <circle cx="1060" cy="180" r="3.2" fill="rgba(220,190,255,1)"/>
+    <circle cx="1250" cy="130" r="2.5" fill="rgba(220,190,255,.9)"/>
+    <circle cx="1150" cy="320" r="2.2" fill="rgba(160,230,255,.9)"/>
+    <circle cx="100" cy="650" r="2.5" fill="rgba(220,190,255,.85)"/>
+    <circle cx="200" cy="780" r="2.2" fill="rgba(220,190,255,.8)"/>
+    <circle cx="1200" cy="700" r="2.5" fill="rgba(160,230,255,.85)"/>
+    <circle cx="1350" cy="800" r="2.2" fill="rgba(160,230,255,.8)"/>
+  </svg>
+    <!-- 背景粒子畫布：用來呈現滑鼠流動的星光與細緻粒子軌跡 -->
+    <canvas id="particle-canvas" aria-hidden="true"></canvas>
+    <!-- 自訂月亮游標：跟隨滑鼠，營造夢境感 -->
+    <div id="cursor-moon" aria-hidden="true">
+      <svg
+        viewBox="0 0 64 64"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label="moon cursor"
+      >
+        <path
+          d="M40 10c-12 0-21 9-21 21s9 21 21 21c7 0 13-3 17-8-8 7-19 10-30 7C18 47 9 36 9 24 9 12 18 2 30 2c5 0 10 1 14 4-4-1-8-2-4-2z"
+          fill="rgba(255,255,255,0.95)"
+        />
+      </svg>
+    </div>
+
+    <!-- ============ 左上 Home 圖示（新版：加框 + 引用旋轉 hover 的同類框架） ============ -->
+    <!-- 使用 nav-icon-frame + home-frame，框樣式與右上設定圖示完全一致 -->
+    <!-- hover 效果：縮放放大（見 .nav-icon-frame.home-frame:hover） -->
+    <a href="/" title="回到大廳" class="nav-icon-frame home-frame nav-top-left">
+      <img
+        src="{{ url_for('static', filename='images/home_icon.png') }}"
+        alt="回大廳"
+        class="home-png-icon-inner"
+      />
+      <div class="tt">回到大廳</div>
+    </a>
+
+    <!-- 設定圖示按鈕：右上角自訂 PNG 圖標，點擊開啟設定面板 -->
+    <!-- ============ 右上 Settings 圖示（保留原旋轉動畫，框樣式更新為 nav-icon-frame）============ -->
+    <!-- hover 效果：rotate(20deg) 旋轉（見 .nav-icon-frame.settings-frame:hover） -->
+    <a
+      href="#"
+      id="settings-toggle"
+      title="編織室設定"
+      class="nav-icon-frame settings-frame nav-top-right"
+    >
+      <img
+        src="{{ url_for('static', filename='images/my_settings.png') }}"
+        alt="設定"
+        class="settings-png-icon"
+      />
+      <div class="tt">編織室設定</div>
+    </a>
+
+    <!-- 設定面板模態：玻璃擬態設計，包含音樂與語音開關 -->
+    <div id="settings-modal">
+      <div class="settings-panel">
+        <h2>設定</h2>
+        <button
+          class="close-btn"
+          id="close-settings-btn"
+          type="button"
+          title="關閉"
+        >
+          ✕
+        </button>
+
+        <!-- 背景音樂開關：開啟/關閉潛意識環境音 -->
+        <div class="settings-option">
+          <div class="toggle-switch">
+            <input type="checkbox" id="toggle-music" title="切換背景環境音" />
+            <div class="switch-slider"></div>
+          </div>
+          <label for="toggle-music">開啟潛意識環境音</label>
+        </div>
+
+        <!-- 語音輸入開關：開啟/關閉語音夢境捕捉 -->
+        <div class="settings-option">
+          <div class="toggle-switch">
+            <input type="checkbox" id="toggle-voice" title="切換語音輸入" />
+            <div class="switch-slider"></div>
+          </div>
+          <label for="toggle-voice">啟用語音夢境捕捉</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 隱藏的背景音訊元素：由設定中的音樂開關控制播放 -->
+    <audio id="bg-music" loop>
+      <source
+        src="{{ url_for('static', filename='audio/dream_lofi.mp3') }}"
+        type="audio/mpeg"
+      />
+      你的瀏覽器不支援音訊播放。
+    </audio>
+
+    <!-- 進入動畫遮罩：載入頁面時顯示，使用者點 anywhere 後淡出 -->
+    <div id="intro-overlay" aria-hidden="false">
+      <!-- 進入動畫顯示的大字：要求使用者點擊以開始 -->
+      <div class="intro-text">你醒啦，開始紀錄夢境吧！</div>
+    </div>
+
+    <!-- 主容器：置中顯示卡片與輸入欄位 -->
+    <div class="container">
+      <div class="card" role="main">
+        <!-- 標題上方的旋轉 eyebrow -->
+<div style="text-align:center;margin-bottom:14px;">
+  <div style="display:inline-flex;align-items:center;gap:8px;padding:5px 16px;border-radius:999px;background:rgba(123,220,255,.07);border:1px solid rgba(123,220,255,.15);">
+    <div style="width:5px;height:5px;border-radius:50%;background:rgba(123,220,255,.9);animation:tdot 2s ease-in-out infinite;"></div>
+    <div style="overflow:hidden;width:240px;height:15px;position:relative;">
+      <div id="ticker-inner" style="display:flex;flex-direction:column;animation:tickerScroll 12s ease-in-out infinite;">
+        <div style="height:15px;line-height:15px;font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(123,220,255,.8);">Subconscious Observation</div>
+        <div style="height:15px;line-height:15px;font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(123,220,255,.8);">Dream · Decode · Discover</div>
+        <div style="height:15px;line-height:15px;font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(123,220,255,.8);">潛意識訊號捕獲中</div>
+        <div style="height:15px;line-height:15px;font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(123,220,255,.8);">Oneiric Analysis Engine</div>
+        <div style="height:15px;line-height:15px;font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(123,220,255,.8);">Subconscious Observation</div>
+      </div>
+    </div>
+  </div>
+</div>
+        <!-- 主標題 -->
+        <h1 class="main-title">夢境編織室</h1>
+        <!-- ============ 新增：標題下方裝飾線（引自 preview .title-deco）============ -->
+        <div class="title-deco">
+          <div class="dl"></div>
+          <div class="dgem"></div>
+          <div class="dr"></div>
+        </div>
+        <!-- 簡短說明文字 -->
+        <p class="lead">
+          在下方記錄你的夢境與當下的現實情況，然後點選「解密潛意識」。
+        <div style="width:calc(100% + 56px);margin:18px -28px 24px;overflow:hidden;padding:10px 0;border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04);background:rgba(255,255,255,.015);">
+        <div id="marquee-track" style="display:flex;white-space:nowrap;width:max-content;animation:marqueeRun 22s linear infinite;"></div>
+        </div>
+        </p>
+
+        <!-- ============ 新增：夢境欄位標籤（引自 preview .slabel）============ -->
+        <!-- 取代原本純文字的 <label>，改為圖示 + 小大寫文字 + 漸層尾線 -->
+        <div class="slabel">
+          <div class="slabel-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(155,120,255,.9)" stroke-width="2.2">
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+            </svg>
+          </div>
+          <span class="slabel-text">夢境日期</span>
+          <div class="slabel-line"></div>
+        </div>
+        <div style="margin: 0 0 18px; display:flex; justify-content:flex-start;">
+          <input
+            id="dream-date"
+            type="date"
+            value=""
+            style="width:220px;max-width:100%;padding:12px 14px;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);color:rgba(255,255,255,.55);"
+          />
+        </div>
+
+        <!-- ============ 新增：夢境欄位標籤（引自 preview .slabel）============ -->
+        <!-- 取代原本純文字的 <label>，改為圖示 + 小大寫文字 + 漸層尾線 -->
+        <div class="slabel">
+          <div class="slabel-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(155,120,255,.9)" stroke-width="2.2">
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+            </svg>
+          </div>
+          <span class="slabel-text">夢境內容</span>
+          <div class="slabel-line"></div>
+        </div>
+
+        <!-- 第一個大型 textarea：夢境內容（包含語音輸入麥克風按鈕） -->
+        <!-- 使用 .dream-textarea-wrapper 作為相對定位容器、樣式容器 -->
+        <div class="dream-textarea-wrapper">
+          <!-- ============ 新增：頂部掃光線與掃光動畫層 ============ -->
+          <div class="ta-top-light"></div>
+          <div class="ta-sweep"></div>
+          <!-- Textarea 主體：透明化，麥克風按鈕會浮動在其上方 -->
+          <textarea
+            id="dream-content"
+            class="big"
+            placeholder="請在此描述你的夢境..."
+            aria-label="夢境內容"
+          ></textarea>
+          <!-- 
+          麥克風按鈕 1（夢境）：可由設定中的開關顯示/隱藏
+          點擊時啟動語音識別，結果附加到 #dream-content
+        -->
+          <button
+            id="mic-btn-dream"
+            class="mic-btn"
+            type="button"
+            title="點擊開始語音輸入（夢境）"
+          >
+            <svg
+              viewBox="0 0 64 64"
+              xmlns="http://www.w3.org/2000/svg"
+              role="img"
+              aria-label="microphone"
+            >
+              <!-- 麥克風主體：青藍色 -->
+              <rect
+                x="24"
+                y="8"
+                width="16"
+                height="28"
+                rx="8"
+                fill="rgba(123, 220, 255, 0.95)"
+              />
+              <!-- 麥克風把手：D 型曲線 -->
+              <path
+                d="M 32 36 Q 40 36 44 42 Q 44 52 32 52 Q 20 52 20 42 Q 24 36 32 36"
+                fill="none"
+                stroke="rgba(123, 220, 255, 0.95)"
+                stroke-width="2.5"
+              />
+              <!-- 聲波效果：表示正在監聽 -->
+              <circle
+                cx="32"
+                cy="48"
+                r="14"
+                fill="none"
+                stroke="rgba(123, 220, 255, 0.6)"
+                stroke-width="2"
+                opacity="0.7"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Checkbox 行：用來決定是否輸入現實情況 -->
+        <div style="display:flex;align-items:center;gap:12px;margin:2px 0 18px;">
+          <div style="flex:1;height:1px;background:rgba(255,255,255,.06);"></div>
+          <div class="checkbox-row" style="margin-bottom:0;border-radius:999px;">
+            <!-- Checkbox：當勾選時，下面的現實情況 textarea 會被停用 -->
+            <input type="checkbox" id="no-reality" />
+            <label for="no-reality">不輸入現實情況</label>
+          </div>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,.06);"></div>
+        </div>
+
+        <!-- ============ 新增：現實欄位標籤（引自 preview .slabel）============ -->
+        <div class="slabel">
+          <div class="slabel-icon" style="background:rgba(123,220,255,.1);border-color:rgba(123,220,255,.2);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(123,220,255,.9)" stroke-width="2.2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 8v4l3 3"/>
+            </svg>
+          </div>
+          <span class="slabel-text">現實情況</span>
+          <div class="slabel-line"></div>
+        </div>
+
+        <!-- 第二個大型 textarea：現實情況（包含語音輸入麥克風按鈕） -->
+        <!-- 同樣使用 .dream-textarea-wrapper 容器、獨立的麥克風按鈕 -->
+        <div class="dream-textarea-wrapper">
+          <!-- ============ 新增：現實欄位頂部掃光線（青藍色調） ============ -->
+          <div class="ta-top-light" style="background:linear-gradient(90deg,transparent,rgba(123,220,255,.3),rgba(100,200,255,.18),transparent);"></div>
+          <div class="ta-sweep" style="animation-delay:-2.5s;background:linear-gradient(90deg,transparent,rgba(123,220,255,.04),transparent);"></div>
+          <!-- Textarea 主體：透明化 -->
+          <textarea
+            id="reality-content"
+            class="big"
+            placeholder="描述你最近發生的現實情況（例如：身處地點、最近在意的事件）"
+            aria-label="現實情況"
+          ></textarea>
+          <!-- 
+          麥克風按鈕 2（現實）：可由設定中的開關顯示/隱藏
+          點擊時啟動語音識別，結果附加到 #reality-content
+        -->
+          <button
+            id="mic-btn-reality"
+            class="mic-btn"
+            type="button"
+            title="點擊開始語音輸入（現實）"
+          >
+            <svg
+              viewBox="0 0 64 64"
+              xmlns="http://www.w3.org/2000/svg"
+              role="img"
+              aria-label="microphone"
+            >
+              <!-- 麥克風主體：青藍色 -->
+              <rect
+                x="24"
+                y="8"
+                width="16"
+                height="28"
+                rx="8"
+                fill="rgba(123, 220, 255, 0.95)"
+              />
+              <!-- 麥克風把手：D 型曲線 -->
+              <path
+                d="M 32 36 Q 40 36 44 42 Q 44 52 32 52 Q 20 52 20 42 Q 24 36 32 36"
+                fill="none"
+                stroke="rgba(123, 220, 255, 0.95)"
+                stroke-width="2.5"
+              />
+              <!-- 聲波效果：表示正在監聽 -->
+              <circle
+                cx="32"
+                cy="48"
+                r="14"
+                fill="none"
+                stroke="rgba(123, 220, 255, 0.6)"
+                stroke-width="2"
+                opacity="0.7"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <!-- 送出按鈕：目前僅在前端阻止預設表單行為，後續可串接 API -->
+        <div style="text-align: center; margin-top: 6px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+          <button id="submit-btn" class="submit-btn">
+            <!-- 月亮圖示搭配按鈕文字 -->
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" style="position:relative;z-index:1;">
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+            </svg>
+            <span style="position:relative;z-index:1;">解密潛意識</span>
+          </button>
+          <button id="save-only-btn" class="submit-btn" style="background:rgba(255,255,255,.07); color:#fff;">
+            <!-- 记录图示  -->
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" style="position:relative;z-index:1;">
+              <path d="M6 3h12v18H6z"/>
+              <path d="M6 8h12"/>
+              <path d="M9 12h6"/>
+            </svg>
+            <span style="position:relative;z-index:1;">只記錄夢境</span>
+          </button>
+          <!-- ============ 新增：送出按鈕下方功能 hint 列（引自 preview .hint-row）============ -->
+          <div class="hint-row" style="flex:1 1 100%;">
+            <div class="hint-tag"><div class="hint-dot"></div>AI 夢境分析</div>
+            <div class="hint-tag"><div class="hint-dot"></div>潛意識圖像生成</div>
+            <div class="hint-tag"><div class="hint-dot"></div>象徵標籤解碼</div>
+          </div>
+        </div>
+
+        <!-- 結果容器：API 回傳後會在此顯示結果卡片 -->
+        <div
+          id="result-container"
+          style="margin-top: 18px; display: flex; justify-content: center"
+        ></div>
+      </div>
+    </div>
+
+    <!-- JavaScript：負責進入動畫淡出、Checkbox 切換邏輯、設定面板、音樂控制與語音輸入 -->
+    <script>
+      // ============ 星點背景層初始化（新增：星空感）============
+      // 動態生成 55 個隨機大小與位置的星點，加入隨機閃爍動畫
+      (function () {
+        const starLayer = document.getElementById('star-layer');
+        if (!starLayer) return;
+        // 小星 45 顆
+for(let i=0;i<45;i++){
+  const s=document.createElement('div');
+  s.className='st';
+  const sz=Math.random()*1.8+0.8;
+  const peak=0.35+Math.random()*0.45;
+  s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--peak:${peak};animation-duration:${2.5+Math.random()*4}s;animation-delay:${Math.random()*6}s;`;
+  starLayer.appendChild(s);
+}
+// 中星 20 顆
+for(let i=0;i<20;i++){
+  const s=document.createElement('div');
+  s.className='st';
+  const sz=Math.random()*1.5+2.2;
+  const peak=0.55+Math.random()*0.3;
+  s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--peak:${peak};animation-duration:${3+Math.random()*3.5}s;animation-delay:${Math.random()*5}s;box-shadow:0 0 3px 0.5px rgba(200,220,255,0.25);`;
+  starLayer.appendChild(s);
+}
+// 主星 9 顆
+const majorPos=[[8,12],[23,45],[67,18],[82,35],[15,72],[55,8],[44,62],[91,15],[38,82]];
+majorPos.forEach(([lx,ty])=>{
+  const s=document.createElement('div');
+  s.className='st major';
+  const sz=3.5+Math.random()*1.5;
+  s.style.cssText=`width:${sz}px;height:${sz}px;left:${lx}%;top:${ty}%;animation-name:majorTwk;animation-duration:${4+Math.random()*3}s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-delay:${Math.random()*5}s;`;
+  starLayer.appendChild(s);
+});
+      })();
+
+      // ============ 基礎 DOM 元素 ============
+      const overlay = document.getElementById("intro-overlay");
+      const noRealityCheckbox = document.getElementById("no-reality");
+      const realityTextarea = document.getElementById("reality-content");
+      const dreamDateField = document.getElementById("dream-date");
+      const submitBtn = document.getElementById("submit-btn");
+      const saveOnlyBtn = document.getElementById("save-only-btn");
+
+      if (dreamDateField && !dreamDateField.value) {
+        dreamDateField.value = new Date().toISOString().split("T")[0];
+      }
+
+      // ============ 設定面板相關 DOM ============
+      /* settings-toggle：新的 PNG 圖標版本（取代舊的 settings-icon SVG） */
+      const settingsToggle = document.getElementById("settings-toggle");
+      const settingsModal = document.getElementById("settings-modal");
+      const closeSettingsBtn = document.getElementById("close-settings-btn");
+      const toggleMusicCheckbox = document.getElementById("toggle-music");
+      const toggleVoiceCheckbox = document.getElementById("toggle-voice");
+
+      // ============ 音訊與語音相關 DOM ============
+      const bgMusic = document.getElementById("bg-music");
+      const dreamContent = document.getElementById("dream-content");
+      const realityContent = document.getElementById("reality-content");
+
+      /* 雙語音麥克風按鈕 */
+      const micBtnDream = document.getElementById("mic-btn-dream");
+      const micBtnReality = document.getElementById("mic-btn-reality");
+
+      /* 追蹤目前正在使用的麥克風（用於確保一次只有一個麥克風監聽） */
+      let activeMicBtn = null;
+
+      /*
+      進入動畫邏輯：當使用者在遮罩上任意點擊時，為遮罩加上 .hidden
+      CSS 會負責過渡（淡出效果），並將遮罩隱藏以顯示底層主畫面
+    */
+      function hideOverlayOnce() {
+        // 如果 overlay 已經被隱藏，或已進入散開動畫，就不再重複執行
+        if (
+          !overlay ||
+          overlay.classList.contains("hidden") ||
+          overlay.classList.contains("dissolving")
+        )
+          return;
+
+        // 加入「薄霧散開」動畫類別，讓字體出現擴散、模糊與透明化效果
+        overlay.classList.add("dissolving");
+        // 將遮罩設為不可再點擊，避免重複觸發
+        overlay.setAttribute("aria-hidden", "true");
+
+        // 在動畫完成後，再將整個遮罩隱藏，避免仍然佔用畫面
+        setTimeout(function () {
+          overlay.classList.add("hidden");
+        }, 1350);
+      }
+
+      // 在遮罩上加入監聽器：點擊任何位置會關閉遮罩
+      if (overlay) {
+        overlay.addEventListener("click", hideOverlayOnce);
+        // 同時允許使用鍵盤（Enter / Space）也能關閉遮罩，提升可及性
+        overlay.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") hideOverlayOnce();
+        });
+      }
+
+      /*
+      Checkbox 切換邏輯：
+      - 當勾選 "不輸入現實情況" 時，停用現實情況 textarea，並改變外觀
+      - 當取消勾選時，恢復可編輯
+      - 此處選擇以 disabled 屬性來防止輸入，同時保留 DOM 結構（方便日後顯示/隱藏動畫）
+    */
+      function toggleRealityTextarea() {
+        if (noRealityCheckbox.checked) {
+          // 設為 disabled，使用者無法編輯
+          realityTextarea.disabled = true;
+          // 也清空內容（選擇性，視產品需求可保留）
+          realityTextarea.value = "";
+          // 設置 aria 屬性，告知螢幕閱讀器該欄位不可用
+          realityTextarea.setAttribute("aria-disabled", "true");
+        } else {
+          // 恢復可編輯
+          realityTextarea.disabled = false;
+          realityTextarea.removeAttribute("aria-disabled");
+        }
+      }
+
+      // 綁定 checkbox 事件
+      noRealityCheckbox.addEventListener("change", toggleRealityTextarea);
+
+      // 頁面初始化時，確保 textarea 的狀態與 checkbox 同步（例如使用者關閉再開啟頁面）
+      document.addEventListener("DOMContentLoaded", function () {
+        toggleRealityTextarea();
+      });
+
+      /*
+      ============ 設定面板邏輯 ============
+      - 設定圖示點擊開啟面板
+      - 模態背景點擊或關閉按鈕關閉面板
+      - 開關切換時控制相應功能
+    */
+
+      // 設定圖示點擊：開啟設定面板
+      /* settings-toggle 是新的 PNG 圖標，點擊時開啟模態 */
+      settingsToggle.addEventListener("click", function (e) {
+        e.preventDefault();
+        settingsModal.classList.add("active");
+      });
+
+      // 關閉按鈕點擊：關閉設定面板
+      closeSettingsBtn.addEventListener("click", function () {
+        settingsModal.classList.remove("active");
+      });
+
+      // 模態背景點擊：關閉設定面板（不關閉內容卡片）
+      settingsModal.addEventListener("click", function (e) {
+        if (e.target === settingsModal) {
+          settingsModal.classList.remove("active");
+        }
+      });
+
+      /*
+      ============ 音樂控制邏輯 ============
+      - 勾選時平滑播放背景音訊
+      - 取消勾選時平滑暫停
+      - 支援音量漸變效果
+    */
+
+      toggleMusicCheckbox.addEventListener("change", function () {
+        if (toggleMusicCheckbox.checked) {
+          // 設定音量為 0，然後播放
+          bgMusic.volume = 0;
+          bgMusic.play().catch(function (err) {
+            console.warn("背景音訊播放失敗：", err);
+          });
+
+          // 平滑增加音量（0 -> 0.3）
+          let vol = 0;
+          const volumeInterval = setInterval(function () {
+            vol += 0.05;
+            if (vol >= 0.3) {
+              bgMusic.volume = 0.3;
+              clearInterval(volumeInterval);
+            } else {
+              bgMusic.volume = vol;
+            }
+          }, 100);
+        } else {
+          // 平滑降低音量（0.3 -> 0），然後暫停
+          let vol = bgMusic.volume;
+          const volumeInterval = setInterval(function () {
+            vol -= 0.05;
+            if (vol <= 0) {
+              bgMusic.volume = 0;
+              bgMusic.pause();
+              clearInterval(volumeInterval);
+            } else {
+              bgMusic.volume = vol;
+            }
+          }, 100);
+        }
+      });
+
+      /*
+      ============ 語音輸入控制邏輯 ============
+      - 勾選時顯示麥克風按鈕
+      - 取消勾選時隱藏麥克風按鈕
+    */
+
+      /* 
+      語音輸入控制邏輯：管理雙麥克風的顯示/隱藏
+      - 勾選時顯示兩個麥克風按鈕（#mic-btn-dream 與 #mic-btn-reality）
+      - 取消勾選時隱藏並停止監聽
+    */
+      toggleVoiceCheckbox.addEventListener("change", function () {
+        if (toggleVoiceCheckbox.checked) {
+          // 顯示兩個麥克風按鈕
+          micBtnDream.classList.add("visible");
+          micBtnReality.classList.add("visible");
+        } else {
+          // 隱藏麥克風按鈕並停止監聽（如果正在進行中）
+          micBtnDream.classList.remove("visible");
+          micBtnReality.classList.remove("visible");
+          if (recognition && recognition.listening) {
+            recognition.abort();
+            micBtnDream.classList.remove("listening");
+            micBtnReality.classList.remove("listening");
+            activeMicBtn = null;
+          }
+        }
+      });
+
+      /*
+      ============ 瀏覽器語音識別 API（SpeechRecognition） ============
+      智慧型雙麥克風邏輯：
+      - 使用 Web Speech API 實現語音輸入
+      - 支援繁體中文識別
+      - 點擊麥克風按鈕開始/停止監聽
+      - 一次只允許一個麥克風監聽
+      - 識別結果附加到相應的 textarea（夢境或現實）
+      - interimResults = false 以防止文字重複
+    */
+
+      // 初始化 SpeechRecognition（支援 webkit 前綴）
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        // 設定為繁體中文識別
+        recognition.lang = "zh-TW";
+        // 持續監聽模式（多次識別）
+        recognition.continuous = false;
+        // 只返回最終結果，避免中間結果重複附加造成文字重複 ★ CRITICAL
+        recognition.interimResults = false;
+        // 最大識別時間（ms）
+        recognition.maxAlternatives = 1;
+        // 清除 leading/trailing whitespace
+        recognition.listening = false;
+
+        // 監聽語音識別開始
+        recognition.onstart = function () {
+          recognition.listening = true;
+          if (activeMicBtn) {
+            activeMicBtn.classList.add("listening");
+          }
+        };
+
+        // 監聽語音識別結束
+        recognition.onend = function () {
+          recognition.listening = false;
+          if (activeMicBtn) {
+            activeMicBtn.classList.remove("listening");
+          }
+        };
+
+        // 監聽識別結果
+        recognition.onresult = function (event) {
+          // 只提取最終識別結果（isFinal === true），避免重複附加
+          let finalTranscript = "";
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            // 僅當結果是最終的時候才提取
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            }
+          }
+
+          // 若有最終識別內容，附加到相應的 textarea
+          if (finalTranscript.trim()) {
+            // 根據 activeMicBtn 判斷附加到哪個 textarea
+            let targetTextarea = dreamContent; // 預設為夢境
+
+            if (activeMicBtn === micBtnReality) {
+              targetTextarea = realityContent; // 若點擊現實麥克風，則附加到現實 textarea
+            }
+
+            // 保留原有內容，在末尾加入新識別的文本
+            const currentText = targetTextarea.value;
+            if (currentText && !currentText.endsWith(" ")) {
+              targetTextarea.value = currentText + " " + finalTranscript.trim();
+            } else {
+              targetTextarea.value = currentText + finalTranscript.trim();
+            }
+          }
+        };
+
+        // 監聽識別錯誤
+        recognition.onerror = function (event) {
+          console.warn("語音識別錯誤：", event.error);
+          if (activeMicBtn) {
+            activeMicBtn.classList.remove("listening");
+          }
+          // 可選：顯示錯誤訊息（例如沒有檢測到聲音、網路錯誤等）
+        };
+
+        /* 
+        麥克風按鈕 1（夢境）點擊事件：啟動/停止語音識別
+        智慧邏輯：若另一個麥克風正在監聽，先停止它
+      */
+        micBtnDream.addEventListener("click", function (e) {
+          e.preventDefault();
+
+          // 若另一個麥克風正在監聽，先停止
+          if (
+            activeMicBtn &&
+            activeMicBtn !== micBtnDream &&
+            recognition.listening
+          ) {
+            recognition.abort();
+            activeMicBtn.classList.remove("listening");
+          }
+
+          // 設定當前活躍麥克風為夢境
+          activeMicBtn = micBtnDream;
+
+          if (recognition.listening) {
+            // 若已在監聽，停止
+            recognition.abort();
+            activeMicBtn = null;
+          } else {
+            // 否則開始新的識別
+            recognition.start();
+          }
+        });
+
+        /* 
+        麥克風按鈕 2（現實）點擊事件：啟動/停止語音識別
+        智慧邏輯：若另一個麥克風正在監聽，先停止它
+      */
+        micBtnReality.addEventListener("click", function (e) {
+          e.preventDefault();
+
+          // 若另一個麥克風正在監聽，先停止
+          if (
+            activeMicBtn &&
+            activeMicBtn !== micBtnReality &&
+            recognition.listening
+          ) {
+            recognition.abort();
+            activeMicBtn.classList.remove("listening");
+          }
+
+          // 設定當前活躍麥克風為現實
+          activeMicBtn = micBtnReality;
+
+          if (recognition.listening) {
+            // 若已在監聽，停止
+            recognition.abort();
+            activeMicBtn = null;
+          } else {
+            // 否則開始新的識別
+            recognition.start();
+          }
+        });
+      } else {
+        // 瀏覽器不支援 Web Speech API，隱藏麥克風按鈕
+        console.warn("此瀏覽器不支援語音識別 API");
+        micBtnDream.style.display = "none";
+        micBtnReality.style.display = "none";
+      }
+
+      /*
+      送出按鈕的暫時行為：
+      - 目前僅示範如何從表單元素讀取值
+      - 阻止預設表單提交，且只在控制台列印值
+      - 未來可改為呼叫後端 API（例如將 dream 傳送給 /api/save-dream 或 LLM 分析路由）
+    */
+      submitBtn.addEventListener("click", function (e) {
+        // 阻止頁面重新載入
+        e.preventDefault();
+
+        // 讀取輸入值
+        const dream = document.getElementById("dream-content").value.trim();
+        const reality = realityTextarea.disabled
+          ? null
+          : realityTextarea.value.trim();
+        const dreamDateField = document.getElementById("dream-date");
+        let dreamDate = dreamDateField ? dreamDateField.value.trim() : "";
+        if (!dreamDate) {
+          const today = new Date();
+          dreamDate = today.toISOString().split("T")[0];
+        }
+
+        // 簡單的前端驗證：夢境內容不可為空
+        if (!dream) {
+          alert("請先輸入夢境內容。");
+          return;
+        }
+
+        // 在送出後會顯示 loading 狀態於結果容器
+        const resultContainer = document.getElementById("result-container");
+
+        // 🔮 建立潛意識語錄庫（字串陣列）
+        // 隨機名言庫
+        const dreamQuotes = [
+          "「夢是潛意識通往意識的捷徑。」—— 佛洛伊德",
+          "「夢是向內窺視潛意識心靈的一扇緊閉的窗。」—— 榮格",
+          "「白天醒著的人只有一個世界，而睡著的人各有各的世界。」—— 赫拉克利特",
+          "「夢境如果沒有被解析，就像一封信沒有被拆開。」—— 《猶太法典》",
+          "「你在夢中遇見的每個人、每件事，其實都是你自己的碎片。」—— 心理學大師",
+          "「現實是客觀的夢境，夢境是主觀的現實。」—— 潛意識編織者",
+          "「當靈魂不再受肉體束縛時，它便能看見真正的自己。」—— 柏拉圖",
+        ];
+        const randomQuote =
+          dreamQuotes[Math.floor(Math.random() * dreamQuotes.length)];
+
+        resultContainer.innerHTML = `
+<style>
+  @keyframes _rotR { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  @keyframes _rotL { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
+  @keyframes _orbP {
+    0%,100%{transform:scale(1);box-shadow:0 0 18px rgba(155,100,255,.8),0 0 40px rgba(100,200,255,.4)}
+    50%{transform:scale(1.18);box-shadow:0 0 30px rgba(155,100,255,1),0 0 60px rgba(100,200,255,.6)}
+  }
+  @keyframes _runD {
+    0%,100%{transform:scaleY(1);opacity:.4}
+    50%{transform:scaleY(2.2);opacity:1}
+  }
+  @keyframes _scan {
+    0%{left:-60%} 100%{left:110%}
+  }
+  @keyframes _twk {
+    0%,100%{opacity:.1;transform:scale(.8)}
+    50%{opacity:.55;transform:scale(1.2)}
+  }
+  @keyframes _fadeIn {
+    from{opacity:0;transform:translateY(6px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+  @keyframes _blink {
+    0%,100%{opacity:.5} 50%{opacity:1}
+  }
+</style>
+
+<div id="dream-loading-wrap" style="
+  position:relative; overflow:hidden; display:flex; align-items:center;
+  justify-content:center; padding:40px 20px; border-radius:18px;
+  background:radial-gradient(circle at 40% 30%,rgba(27,37,64,.9),rgba(9,10,15,.95));
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 18px 48px rgba(0,0,0,.5);
+  max-width:460px; width:100%;
+  backdrop-filter:blur(12px);
+">
+  <div id="dl-stars"></div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:26px;position:relative;z-index:2;">
+
+    <!-- 旋轉圓環組 -->
+    <div style="position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center;">
+      <svg viewBox="0 0 120 120" style="position:absolute;inset:0;width:100%;height:100%;animation:_rotR 4s linear infinite;transform-origin:center">
+        <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(155,100,255,.2)" stroke-width="1"/>
+        <circle cx="60" cy="4"  r="3.5" fill="rgba(155,100,255,.85)"/>
+        <circle cx="116" cy="60" r="2.5" fill="rgba(123,220,255,.7)"/>
+        <circle cx="60" cy="116" r="3" fill="rgba(255,120,200,.7)"/>
+      </svg>
+      <svg viewBox="0 0 120 120" style="position:absolute;inset:0;width:100%;height:100%;animation:_rotL 2.8s linear infinite;transform-origin:center">
+        <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(123,220,255,.18)" stroke-width="1" stroke-dasharray="6 4"/>
+        <circle cx="60" cy="18" r="2.5" fill="rgba(123,220,255,.9)"/>
+        <circle cx="102" cy="60" r="2" fill="rgba(155,100,255,.7)"/>
+      </svg>
+      <svg viewBox="0 0 120 120" style="position:absolute;inset:0;width:100%;height:100%;animation:_rotR 1.8s linear infinite;transform-origin:center">
+        <circle cx="60" cy="60" r="28" fill="none" stroke="rgba(255,120,200,.13)" stroke-width="1"/>
+        <circle cx="60" cy="32" r="2" fill="rgba(255,180,255,.8)"/>
+        <circle cx="88" cy="60" r="1.8" fill="rgba(123,220,255,.6)"/>
+      </svg>
+      <!-- 中心光球 -->
+      <div style="width:26px;height:26px;border-radius:50%;position:relative;z-index:2;
+        background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.9),rgba(155,100,255,.6));
+        animation:_orbP 2s ease-in-out infinite;">
+      </div>
+    </div>
+
+    <!-- 狀態文字 -->
+    <div style="text-align:center;display:flex;flex-direction:column;gap:10px;">
+      <div id="dl-status" style="font-size:13px;letter-spacing:2.5px;color:rgba(123,220,255,.9);
+        text-transform:uppercase;animation:_blink 2.4s ease-in-out infinite;font-family:system-ui,sans-serif;">
+        編織潛意識線索中
+      </div>
+      <div style="font-size:13.5px;color:rgba(220,228,255,.7);font-style:italic;line-height:1.75;
+        letter-spacing:.4px;max-width:300px;animation:_fadeIn .8s ease forwards;font-family:system-ui,sans-serif;">
+        ${randomQuote}
+      </div>
+    </div>
+
+    <!-- 符文點陣 -->
+    <div style="display:flex;gap:14px;align-items:center;">
+      <div style="width:7px;height:7px;border-radius:50%;background:rgba(123,220,255,.8);animation:_runD 1.4s ease-in-out infinite;animation-delay:0s"></div>
+      <div style="width:7px;height:7px;border-radius:50%;background:rgba(155,100,255,.8);animation:_runD 1.4s ease-in-out infinite;animation-delay:.2s"></div>
+      <div style="width:7px;height:7px;border-radius:50%;background:rgba(255,120,200,.8);animation:_runD 1.4s ease-in-out infinite;animation-delay:.4s"></div>
+      <div style="width:7px;height:7px;border-radius:50%;background:rgba(100,200,255,.8);animation:_runD 1.4s ease-in-out infinite;animation-delay:.6s"></div>
+      <div style="width:7px;height:7px;border-radius:50%;background:rgba(155,100,255,.8);animation:_runD 1.4s ease-in-out infinite;animation-delay:.8s"></div>
+    </div>
+
+    <!-- 掃描線 -->
+    <div style="width:200px;height:3px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;position:relative;">
+      <div style="position:absolute;top:0;left:-60%;width:60%;height:100%;border-radius:99px;
+        background:linear-gradient(90deg,transparent,rgba(123,220,255,.85),rgba(155,100,255,.9),transparent);
+        animation:_scan 1.8s ease-in-out infinite;">
+      </div>
+    </div>
+
+  </div>
+</div>
+`;
+
+        // 生成星點背景
+        const starsContainer = document.getElementById("dl-stars");
+        if (starsContainer) {
+          starsContainer.style.cssText =
+            "position:absolute;inset:0;pointer-events:none;border-radius:18px;overflow:hidden;";
+          for (let i = 0; i < 35; i++) {
+            const s = document.createElement("div");
+            const sz = Math.random() * 2 + 1;
+            s.style.cssText = `position:absolute;border-radius:50%;background:white;
+      width:${sz}px;height:${sz}px;
+      left:${Math.random() * 100}%;top:${Math.random() * 100}%;
+      animation:_twk ${2 + Math.random() * 3}s ${Math.random() * 3}s linear infinite;`;
+            starsContainer.appendChild(s);
+          }
+        }
+
+        // 狀態文字輪播
+        const statusTexts = [
+          "解析夢境符號中",
+          "校準潛意識頻率",
+          "編織記憶碎片中",
+          "凝視象徵的深淵",
+          "喚醒沉睡的意象",
+        ];
+        let _si = 0;
+        const _statusInterval = setInterval(() => {
+          const el = document.getElementById("dl-status");
+          if (!el) {
+            clearInterval(_statusInterval);
+            return;
+          }
+          _si = (_si + 1) % statusTexts.length;
+          el.style.transition = "opacity .35s";
+          el.style.opacity = "0";
+          setTimeout(() => {
+            if (document.getElementById("dl-status")) {
+              el.textContent = statusTexts[_si];
+              el.style.opacity = "";
+            }
+          }, 380);
+        }, 2800);
+
+        // 呼叫後端 API /api/analyze-dream，使用 JSON POST
+        fetch("/api/analyze-dream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dream: dream, reality: reality, dream_date: dreamDate }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data || !data.success) {
+              // 若後端回傳失敗，顯示錯誤訊息
+              resultContainer.innerHTML =
+                '<div style="color:#900;">分析失敗：' +
+                (data && data.message ? data.message : "伺服器錯誤") +
+                "</div>";
+              return;
+            }
+
+            // 解析後端回傳的結果物件，並處理 raw markdown JSON 字串
+            const res = data.result || {};
+            const placeholderImage = "https://picsum.photos/400/300?blur=2";
+
+            function cleanMarkdownJson(rawText) {
+              let cleaned = (rawText || "").trim();
+              if (cleaned.startsWith("```json")) {
+                cleaned = cleaned.slice(7);
+              } else if (cleaned.startsWith("```")) {
+                cleaned = cleaned.slice(3);
+              }
+              if (cleaned.endsWith("```")) {
+                cleaned = cleaned.slice(0, -3);
+              }
+              return cleaned.trim();
+            }
+
+            let emotion = "中性";
+            let analysis = "";
+            let imageUrl = placeholderImage;
+            let symbolTags = [];
+
+            if (typeof res === "string") {
+              // 若後端直接回傳 raw markdown JSON 字串
+              const cleaned = cleanMarkdownJson(res);
+              try {
+                const parsed = JSON.parse(cleaned);
+                emotion = parsed.emotion_tag || emotion;
+                symbolTags = Array.isArray(parsed.symbol_tags)
+                  ? parsed.symbol_tags
+                  : [];
+                analysis = parsed.ai_analysis || "";
+                imageUrl =
+                  parsed.image_url ||
+                  parsed.ai_image_url ||
+                  parsed.image ||
+                  placeholderImage;
+              } catch (err) {
+                analysis = cleaned;
+              }
+            } else {
+              emotion = res.emotion_tag || emotion;
+
+              // 新增：把 emotion_details 也存起來供遊戲推薦使用
+              if (res.emotion_details) {
+                  try {
+                      if (typeof res.emotion_details === 'string') {
+                          res.emotion_details = JSON.parse(res.emotion_details);
+                      }
+                  } catch(e) {
+                      res.emotion_details = null;
+                  }
+              }
+
+              symbolTags = Array.isArray(res.symbol_tags)
+                ? res.symbol_tags
+                : [];
+              imageUrl =
+                res.image_url ||
+                res.ai_image_url ||
+                res.image ||
+                placeholderImage;
+
+              if (typeof res.ai_analysis === "string") {
+                const cleanedAnalysis = cleanMarkdownJson(res.ai_analysis);
+                try {
+                  const parsed = JSON.parse(cleanedAnalysis);
+                  analysis = parsed.ai_analysis || "";
+                  emotion = parsed.emotion_tag || emotion;
+                } catch (err) {
+                  analysis = cleanedAnalysis;
+                }
+              }
+            }
+
+            // 根據情緒標籤決定漸層色彩（可擴充更多情緒對應）
+            let gradient;
+            if (emotion.includes("焦慮") || emotion.includes("不安")) {
+              // 深紫系漸層
+              gradient = "linear-gradient(120deg, #2b005b, #6a00ff, #2b005b)";
+            } else if (
+              emotion.includes("開心") ||
+              emotion.includes("愉快") ||
+              emotion.includes("快樂")
+            ) {
+              // 明亮青藍紫霓虹系
+              gradient = "linear-gradient(120deg, #00f5ff, #7c4dff, #00ffe1)";
+            } else if (emotion.includes("難過") || emotion.includes("悲傷")) {
+              // 憂鬱藍灰系
+              gradient = "linear-gradient(120deg, #2b5876, #4e4376, #2b5876)";
+            } else {
+              // 預設夢幻漸層
+              gradient = "linear-gradient(120deg, #7b2ff7, #f107a3, #00d2ff)";
+            }
+
+            // 建立結果卡片 DOM，並將 Polaroid 佈局與潛意識分析文字注入
+            const card = document.createElement("div");
+            card.className = "result-card";
+            card.innerHTML = `
+            <div class="dream-result-container">
+              <div class="polaroid-frame">
+                <img src="${imageUrl}" alt="夢境記憶照片" onerror="this.style.opacity='0.55'; this.style.filter='blur(0.5px)';" />
+              </div>
+              <div class="analysis-panel">
+                <span class="emotion-tag">情緒判定：${emotion}</span>
+                <!-- ✅ 新增：象徵標籤列（只在有標籤時顯示） -->
+                  ${
+                    symbolTags.length > 0
+                      ? `
+                <div class="symbol-tags-row">
+                ${symbolTags.map((tag) => `<span class="symbol-tag"># ${tag}</span>`).join("")}
+              </div>
+                `
+                      : ""
+                  }
+                <h2>潛意識分析</h2>
+                <div class="analysis-text">${analysis}</div>
+              </div>
+            </div>
+            <div style="text-align: center; margin-top: 15px; display:flex; justify-content:center; gap:10px;">
+                <button id="download-btn" style="padding: 8px 18px; font-size: 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; background: rgba(255,255,255,0.1); color: white; cursor: pointer; backdrop-filter: blur(5px); transition: all 0.3s ease;">💾 封存夢境記憶</button>
+                <button id="ig-story-btn" style="padding: 8px 18px; font-size: 14px; border: 1px solid rgba(220,175,60,0.4); border-radius: 999px; background: rgba(220,175,60,0.12); color: rgba(255,230,140,0.95); cursor: pointer; backdrop-filter: blur(5px); transition: all 0.3s ease;">📲 下載 IG Story</button>
+            </div>
+            <div id="game-recommend-btn" style="text-align:center; margin-top: 12px; display:none;">
+              <a id="game-link" href="#" target="_blank"
+                  style="display:inline-flex; align-items:center; gap:8px; padding:10px 24px;
+                        font-size:14px; border-radius:999px; text-decoration:none; color:#fff;
+                        background:linear-gradient(135deg,rgba(155,120,255,0.6),rgba(123,220,255,0.5));
+                        border:1px solid rgba(155,120,255,0.4);
+                        box-shadow:0 0 14px rgba(155,120,255,0.25);
+                        transition:all 0.3s ease;">
+                  🎮 <span id="game-btn-text">根據你的情緒玩個遊戲</span>
+              </a>
+          </div>
+          `;
+
+            // 設定漸層背景與必要的樣式（JS 直接設定 style 以利動態顏色）
+            card.style.background = gradient;
+            card.style.backgroundSize = "300% 300%";
+
+            // 清空並加入新的結果卡片
+            resultContainer.innerHTML = "";
+            resultContainer.appendChild(card);
+
+            // 若需要，將結果卡片滾到可視範圍
+            card.scrollIntoView({ behavior: "smooth" });
+            // ===== 根據情緒推薦遊戲 =====
+            const gameBtn = document.getElementById('game-recommend-btn');
+            const gameLink = document.getElementById('game-link');
+            const gameBtnText = document.getElementById('game-btn-text');
+
+            // 情緒關鍵字對應表
+            const emotionGameMap = [
+                {
+                    keywords: ['生氣','暴怒','煩躁','怨氣','不甘心','被背叛','吃醋','憤怒'],
+                    category: 'angry',
+                    url: '/games/angry',
+                    text: '😤 去批改考卷發洩一下'
+                },
+                {
+                    keywords: ['難過','悲傷','心碎','沮喪','委屈','悵然','依依不捨','遺憾','自責','無助'],
+                    category: 'sad',
+                    url: '/static/games/popfat/index.html',
+                    text: '😿 去狂點貓咪轉移注意力'
+                },
+                {
+                    keywords: ['開心','欣喜','滿足','愜意','成就感','刺激','期待','被肯定','歸屬感','喜悅','快樂'],
+                    category: 'happy',
+                    url: '/games/electric',
+                    text: '⚡ 心情好就來挑戰電流急急棒'
+                },
+                {
+                    keywords: ['焦慮','恐懼','忐忑','驚恐','不安','惶恐','社交焦慮','怕被拋棄','緊張'],
+                    category: 'anxious',
+                    url: '/static/games/minesweeper/index.html',
+                    text: '💣 專注排雷轉移焦慮'
+                },
+                {
+                    keywords: ['平靜','放鬆','釋然','寧靜','心動','患得患失','五味雜陳','愛恨交織','哭笑不得'],
+                    category: 'calm',
+                    url: '/games/tetris',
+                    text: '🧩 靜下來疊疊方塊吧'
+                }
+            ];
+
+            // 把情緒詞對應到 category 的輔助函式
+            function getCategory(keyword) {
+                for (const entry of emotionGameMap) {
+                    if (entry.keywords.some(k => keyword.includes(k) || k.includes(keyword))) {
+                        return entry.category;
+                    }
+                }
+                return null;
+            }
+
+            let finalCategory = null;
+
+            // 第一優先：用 emotion_details 比例最高的那個情緒決定
+            const emotionDetails = res.emotion_details;
+            if (emotionDetails && typeof emotionDetails === 'object') {
+                let maxWeight = -1;
+                let maxEmotion = '';
+                for (const [emo, weight] of Object.entries(emotionDetails)) {
+                    if (weight > maxWeight) {
+                        maxWeight = weight;
+                        maxEmotion = emo;
+                    }
+                }
+                if (maxEmotion) {
+                    finalCategory = getCategory(maxEmotion);
+                }
+            }
+
+            // 第二優先：emotion_details 比對不到時，用 emotion_tag 關鍵字比對
+            if (!finalCategory) {
+                finalCategory = getCategory(emotion);
+            }
+
+            // 找到對應的遊戲設定
+            const gameEntry = emotionGameMap.find(e => e.category === finalCategory)
+                || emotionGameMap.find(e => e.category === 'sad'); // 最終預設
+
+            gameLink.href = gameEntry.url;
+            gameBtnText.textContent = gameEntry.text;
+            gameBtn.style.display = 'block';
+          })
+          .catch((err) => {
+            resultContainer.innerHTML =
+              '<div style="color:#900;">與伺服器溝通失敗，請稍後再試。</div>';
+            console.error(err);
+          });
+      });
+
+      if (saveOnlyBtn) {
+        saveOnlyBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+
+          const dream = document.getElementById("dream-content").value.trim();
+          const reality = realityTextarea.disabled
+            ? null
+            : realityTextarea.value.trim();
+          let dreamDate = dreamDateField ? dreamDateField.value.trim() : "";
+          if (!dreamDate) {
+            const today = new Date();
+            dreamDate = today.toISOString().split("T")[0];
+          }
+
+          if (!dream) {
+            alert("請先輸入夢境內容。");
+            return;
+          }
+
+          const resultContainer = document.getElementById("result-container");
+          resultContainer.innerHTML = `<div style="color:#b4d7ff;">正在儲存夢境，未送交 AI 分析...</div>`;
+
+          fetch("/api/save-dream-only", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dream: dream, reality: reality, dream_date: dreamDate }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (!data || !data.success) {
+                resultContainer.innerHTML = `<div style="color:#f66;">儲存失敗：${data && data.message ? data.message : "伺服器錯誤"}</div>`;
+                return;
+              }
+              resultContainer.innerHTML = `
+                <div style="max-width:520px;padding:24px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 40px rgba(0,0,0,.15);color:#ebf4ff;">
+                  <h3 style="margin:0 0 10px;font-size:1rem;">夢境已儲存</h3>
+                  <p style="margin:0;line-height:1.7;color:rgba(235,244,255,.85);">已成功將夢境記錄到您的資料庫中，並保留為純文字紀錄，不送交 AI 分析或製作圖片。</p>
+                </div>
+              `;
+            })
+            .catch((err) => {
+              resultContainer.innerHTML = `<div style="color:#f66;">網路錯誤，請稍後再試。</div>`;
+            });
+        });
+      }
+
+      /*
+      ============ Lightbox 事件委派邏輯 ============
+      使用事件委派在 #result-container 上監聽動態生成的圖像點擊
+      - 點擊 .polaroid-frame 內的圖像時開啟 Lightbox
+      - 點擊 Lightbox 任何位置時關閉它
+    */
+      // ============ Lightbox 完美修復版：活化 CSS 動畫開關 ============
+      document.addEventListener("click", function (e) {
+        const lightbox = document.getElementById("image-lightbox");
+        const lightboxImg = document.getElementById("lightbox-image");
+
+        // 1. 點擊圖片：觸發放大並解除透明鎖
+        if (
+          e.target &&
+          e.target.tagName === "IMG" &&
+          e.target.closest(".polaroid-frame")
+        ) {
+          if (lightbox && lightboxImg) {
+            lightboxImg.src = e.target.src;
+            lightbox.classList.add("active"); // 讓 opacity 變成 1，解鎖隱形
+          }
+        }
+        // 2. 點擊任意處：平滑淡出關閉
+        else if (lightbox && lightbox.classList.contains("active")) {
+          lightbox.classList.remove("active");
+          // 延遲 350ms 等淡出動畫播完後再清空圖片網址，畫面才不會閃爍
+          setTimeout(() => {
+            if (lightboxImg) lightboxImg.src = "";
+          }, 350);
+        }
+      });
+
+      document.addEventListener("click", function (e) {
+        if (e.target && e.target.id === "download-btn") {
+          const targetCard = document.querySelector(".result-card");
+          if (!targetCard) return;
+
+          // Temporarily hide the button itself during screenshot
+          e.target.style.display = "none";
+
+          html2canvas(targetCard, {
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: null,
+            scale: 2, // Increase resolution for crisp text
+          })
+            .then((canvas) => {
+              e.target.style.display = "inline-block"; // Restore button
+              const link = document.createElement("a");
+              link.download = "dream-memory-" + Date.now() + ".png";
+              link.href = canvas.toDataURL("image/png");
+              link.click();
+            })
+            .catch((err) => {
+              e.target.style.display = "inline-block";
+              alert("圖片封存失敗，請稍後再試。");
+              console.error(err);
+            });
+        }
+      });
+
+      // ============ IG Story 下載邏輯  ============
+      document.addEventListener("click", function (e) {
+        if (e.target && e.target.id === "ig-story-btn") {
+          const card = document.querySelector(".result-card");
+          if (!card) return;
+
+          const emotionEl = card.querySelector(".emotion-tag");
+          const symbolEls = card.querySelectorAll(".symbol-tag");
+          const imgEl = card.querySelector(".polaroid-frame img");
+
+          const emotion = emotionEl ? emotionEl.textContent.trim() : "";
+          const imageUrl = imgEl ? imgEl.src : "";
+          const symbolTags = Array.from(symbolEls).map((t) =>
+            t.textContent.trim(),
+          );
+
+          const now = new Date();
+          const dateStr = `${now.getFullYear()} · ${String(now.getMonth() + 1).padStart(2, "0")} · ${String(now.getDate()).padStart(2, "0")}`;
+
+          const tagsHtml = symbolTags
+            .map((t) => `<span class="sc-sym-tag">${t}</span>`)
+            .join("");
+
+          const arcaneWords = [
+            { text: "SUBCONSCIOUS", color: "rgba(220,190,100,0.18)" },
+            { text: "DREAM · STATE", color: "rgba(160,140,255,0.15)" },
+            { text: "潛意識回響", color: "rgba(200,190,255,0.12)" },
+            { text: "ONEIRIC LOG", color: "rgba(220,190,100,0.1)" },
+          ];
+          const wordsHtml = arcaneWords
+            .map(
+              (w) =>
+                `<span class="sc-art-word" style="color:${w.color}">${w.text}</span>`,
+            )
+            .join("");
+
+          const storyCard = document.createElement("div");
+          storyCard.id = "ig-story-card";
+          storyCard.innerHTML = `
+      <div class="sc-hud tl"></div>
+      <div class="sc-hud tr"></div>
+      <div class="sc-hud bl"></div>
+      <div class="sc-hud br"></div>
+
+      <!-- 金色月亮（圖片右上） -->
+      <svg class="sc-moon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="scMoonGrad" cx="40%" cy="35%" r="60%">
+            <stop offset="0%"   stop-color="#ffe98a"/>
+            <stop offset="55%"  stop-color="#f0c040"/>
+            <stop offset="100%" stop-color="#b8860b"/>
+          </radialGradient>
+          <filter id="scMoonGlow">
+            <feGaussianBlur stdDeviation="2.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <circle cx="32" cy="32" r="28" fill="rgba(240,192,64,0.06)" filter="url(#scMoonGlow)"/>
+        <circle cx="32" cy="32" r="22" fill="rgba(240,192,64,0.10)"/>
+        <path d="M38 10 C24 10 14 20 14 32 C14 44 24 54 38 54 C30 50 24 42 24 32 C24 22 30 14 38 10 Z"
+              fill="url(#scMoonGrad)" filter="url(#scMoonGlow)"/>
+        <circle cx="28" cy="28" r="2.2" fill="rgba(160,110,0,0.25)"/>
+        <circle cx="24" cy="38" r="1.4" fill="rgba(160,110,0,0.2)"/>
+        <circle cx="32" cy="44" r="1.0" fill="rgba(160,110,0,0.18)"/>
+      </svg>
+
+      <!-- 圖片區（無眼睛、無星座，乾淨） -->
+      <div class="sc-img-zone">
+        <img src="${imageUrl}" crossorigin="anonymous" />
+        <div class="sc-img-fade"></div>
+        <div class="sc-gold-line"></div>
+      </div>
+
+      <!-- 資訊面板 -->
+      <div class="sc-info-panel">
+        <div class="sc-panel-header">
+          <span class="sc-site-name">夢境編織室</span>
+          <div class="sc-header-right">
+            <span class="sc-sys-id">${dateStr}</span>
+            <!-- 六芒星：兩個等邊三角形疊合，黃色線條 -->
+            <svg class="sc-hexagram" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+              <!-- 上三角（頂點朝上） -->
+              <polygon points="36,6 66,57 6,57"
+                fill="none"
+                stroke="rgba(220,185,60,0.85)"
+                stroke-width="3"
+                stroke-linejoin="round"/>
+              <!-- 下三角（頂點朝下） -->
+              <polygon points="36,66 6,15 66,15"
+                fill="none"
+                stroke="rgba(220,185,60,0.85)"
+                stroke-width="3"
+                stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+
+        <span class="sc-emotion-pill">${emotion}</span>
+
+        <div class="sc-symbol-row">${tagsHtml}</div>
+
+        <div class="sc-divider"></div>
+
+        <span class="sc-decode-label">SUBCONSCIOUS · DECODE</span>
+
+        <!-- 裝飾藝術區（眼睛保留於此） -->
+        <div class="sc-decode-art">
+          <div class="sc-art-halo"></div>
+          <div class="sc-art-halo h2"></div>
+
+          <svg class="sc-eye-large" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14.5" fill="none"
+                    stroke="rgba(220,175,60,0.4)" stroke-width="0.4"/>
+            <circle cx="16" cy="16" r="11" fill="none"
+                    stroke="rgba(220,175,60,0.25)" stroke-width="0.3"/>
+            <path d="M2 16 Q16 2 30 16 Q16 30 2 16 Z"
+                  fill="none" stroke="rgba(220,175,60,0.7)" stroke-width="0.7"/>
+            <circle cx="16" cy="16" r="5" fill="none"
+                    stroke="rgba(220,175,60,0.6)" stroke-width="0.6"/>
+            <circle cx="16" cy="16" r="2.5" fill="rgba(220,175,60,0.55)"/>
+            <line x1="16" y1="0.5"  x2="16" y2="3.5"   stroke="rgba(220,175,60,0.3)" stroke-width="0.4"/>
+            <line x1="16" y1="28.5" x2="16" y2="31.5"  stroke="rgba(220,175,60,0.3)" stroke-width="0.4"/>
+            <line x1="0.5"  y1="16" x2="3.5"  y2="16"  stroke="rgba(220,175,60,0.3)" stroke-width="0.4"/>
+            <line x1="28.5" y1="16" x2="31.5" y2="16"  stroke="rgba(220,175,60,0.3)" stroke-width="0.4"/>
+            <line x1="3.5"  y1="3.5"   x2="5.5"  y2="5.5"   stroke="rgba(220,175,60,0.2)" stroke-width="0.4"/>
+            <line x1="26.5" y1="3.5"   x2="28.5" y2="5.5"   stroke="rgba(220,175,60,0.2)" stroke-width="0.4"/>
+            <line x1="3.5"  y1="26.5"  x2="5.5"  y2="28.5"  stroke="rgba(220,175,60,0.2)" stroke-width="0.4"/>
+            <line x1="26.5" y1="26.5"  x2="28.5" y2="28.5"  stroke="rgba(220,175,60,0.2)" stroke-width="0.4"/>
+          </svg>
+
+          <div class="sc-art-words">
+            ${wordsHtml}
+          </div>
+        </div>
+
+        <!-- 底部 Footer -->
+        <div class="sc-card-footer">
+          <span class="sc-footer-date">DREAM · LOG</span>
+          <span class="sc-footer-logo">Subconscious Obs.</span>
+        </div>
+      </div>
+    `;
+
+          document.body.appendChild(storyCard);
+
+          html2canvas(storyCard, {
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: null,
+            scale: 1,
+            width: 1080,
+            height: 1920,
+          })
+            .then((canvas) => {
+              document.body.removeChild(storyCard);
+              const link = document.createElement("a");
+              link.download = "dream-ig-story-" + Date.now() + ".png";
+              link.href = canvas.toDataURL("image/png");
+              link.click();
+            })
+            .catch((err) => {
+              document.body.removeChild(storyCard);
+              alert("IG Story 下載失敗，請稍後再試。");
+              console.error(err);
+            });
+        }
+      });
+      const mItems=['Dream · Decode','夢境符號學','Subconscious Signal','潛意識解碼','Oneiric Archive','記憶碎片','Symbol Alchemy','靈魂頻率'];
+      const track = document.getElementById('marquee-track');
+[...mItems,...mItems].forEach((t,i)=>{
+  const d=document.createElement('span');
+  d.style.cssText='display:inline-flex;align-items:center;gap:8px;padding:0 22px;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(180,200,255,.28);';
+  d.innerHTML=t+'<span style="color:rgba(155,120,255,.4);font-size:13px;">'+(i%2===0?' ✦ ':' · ')+'</span>';
+  track.appendChild(d);
+});
+    </script>
+    <div id="image-lightbox" class="image-lightbox">
+      <img id="lightbox-image" src="" alt="放大夢境記憶照片" />
+    </div>
+    <div id="aurora-layer" style="position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;"></div>
+    <div id="meteor-layer" style="position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;"></div>
+    <script src="{{ url_for('static', filename='shared-dream-effects.js') }}"></script>
+  </body>
+</html>
